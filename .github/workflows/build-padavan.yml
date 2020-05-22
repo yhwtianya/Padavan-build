@@ -1,5 +1,13 @@
-#修改TNAME: K2P-5.0 中的K2P-5.0为你需要编译的型号，注意名称要与configs/templates/目录下的名字相同
-name: Build RM2100
+#
+# This is free software, lisence use MIT.
+# 
+# Copyright (C) 2019 P3TERX <https://p3terx.com>
+# Copyright (C) 2019 KFERMercer <KFER.Mercer@gmail.com>
+# 
+# <https://github.com/KFERMercer/OpenWrt-CI>
+#
+
+name: OpenWrt-CI
 
 on: 
   release:
@@ -13,98 +21,212 @@ on:
 #    - cron: 0 8 * * 5
   watch:
     types: [started]
-
+    
 jobs:
-  build:
-    runs-on: ubuntu-18.04
+
+  build_openwrt:
+
+    name: Build OpenWrt
+    runs-on: ubuntu-latest
     if: github.event.repository.owner.id == github.event.sender.id
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@master
-    - name: Initialization environment
-      env:
-        DEBIAN_FRONTEND: noninteractive
-      run: |
-        sudo apt-get update
-        sudo apt-get -y install unzip libtool-bin curl cmake gperf gawk flex bison nano xxd \
-        cpio git python-docutils gettext automake autopoint texinfo build-essential help2man \
-        pkg-config zlib1g-dev libgmp3-dev libmpc-dev libmpfr-dev libncurses5-dev libltdl-dev gcc-multilib
-    - name: Clone source code
-      run: |
-        git clone --depth=1 https://github.com/yhwtianya/rt-n56u.git /opt/rt-n56u
-        cd /opt/rt-n56u/toolchain-mipsel
-        sh dl_toolchain.sh
-        mkdir -p /opt/images/
-    - name: Build Firmware
-      env:
-        TNAME: RM2100
-      run: |
-        cd /opt/rt-n56u/trunk
-        if [ ! -f configs/templates/$TNAME.config ] ; then
-        echo "configs/templates/$TNAME.config not found "
-        exit 1
-        fi
-        cp -f configs/templates/$TNAME.config .config
-        sed -i 's/CONFIG_FIRMWARE_INCLUDE_OPENSSL_EXE=n/CONFIG_FIRMWARE_INCLUDE_OPENSSL_EXE=y/g' .config
-        ################################################################################################
-        #因不同型号配置功能不一样，所以先把配置项删除，如果你自己要添加其他的，也要写上删除这一条，切记！！！
-        ################################################################################################
-        sed -i '/CONFIG_FIRMWARE_INCLUDE_MENTOHUST/d' .config #删除配置项MENTOHUST
-        sed -i '/CONFIG_FIRMWARE_INCLUDE_SCUTCLIENT/d' .config #删除配置项SCUTCLIENT
-        sed -i '/CONFIG_FIRMWARE_INCLUDE_SHADOWSOCKS/d' .config #删除配置项SS plus+
-        sed -i '/CONFIG_FIRMWARE_INCLUDE_SSSERVER/d' .config #删除配置项SS server
-        sed -i '/CONFIG_FIRMWARE_INCLUDE_DNSFORWARDER/d' .config #删除配置项DNSFORWARDER
-        sed -i '/CONFIG_FIRMWARE_INCLUDE_ADBYBY/d' .config #删除配置项adbyby plus+
-        sed -i '/CONFIG_FIRMWARE_INCLUDE_FRPC/d' .config #删除配置项adbyby plus+
-        sed -i '/CONFIG_FIRMWARE_INCLUDE_FRPS/d' .config #删除配置项adbyby plus+
-        sed -i '/CONFIG_FIRMWARE_INCLUDE_TUNSAFE/d' .config #删除配置项adbyby plus+
-        sed -i '/CONFIG_FIRMWARE_INCLUDE_ALIDDNS/d' .config #删除配置项阿里DDNS
-        sed -i '/CONFIG_FIRMWARE_INCLUDE_FRPC/d' .config #删除配置项FRPC
-        sed -i '/CONFIG_FIRMWARE_INCLUDE_FRPS/d' .config #删除配置项FRPS
-        sed -i '/CONFIG_FIRMWARE_INCLUDE_SMARTDNS/d' .config
-        sed -i '/CONFIG_FIRMWARE_INCLUDE_SRELAY/d' .config
-        sed -i 's/CONFIG_FIRMWARE_INCLUDE_OPENSSL_EXE=n/CONFIG_FIRMWARE_INCLUDE_OPENSSL_EXE=y/g' .config
-        ######################################################################
-        #以下选项是定义你需要的功能（y=集成,n=忽略），重新写入到.config文件
-        ######################################################################
-        echo "CONFIG_FIRMWARE_INCLUDE_MENTOHUST=n" >> .config #MENTOHUST
-        echo "CONFIG_FIRMWARE_INCLUDE_SCUTCLIENT=n" >> .config #SCUTCLIENT
-        echo "CONFIG_FIRMWARE_INCLUDE_SHADOWSOCKS=y" >> .config #SS plus+
-        echo "CONFIG_FIRMWARE_INCLUDE_SSSERVER=n" >> .config #SS server
-        echo "CONFIG_FIRMWARE_INCLUDE_DNSFORWARDER=n" >> .config #DNSFORWARDER
-        echo "CONFIG_FIRMWARE_INCLUDE_ADBYBY=y" >> .config #adbyby plus+
-        echo "CONFIG_FIRMWARE_INCLUDE_FRPC=n" >> .config #内网穿透FRPC
-        echo "CONFIG_FIRMWARE_INCLUDE_FRPS=n" >> .config #内网穿透FRPS
-        echo "CONFIG_FIRMWARE_INCLUDE_TUNSAFE=n" >> .config #TUNSAFE
-        echo "CONFIG_FIRMWARE_INCLUDE_ALIDDNS=y" >> .config #阿里DDNS
-        echo "CONFIG_FIRMWARE_INCLUDE_SMARTDNS=y" >> .config #smartdns
-        echo "CONFIG_FIRMWARE_INCLUDE_SMARTDNSBIN=y" >> .config #smartdns二进制文件
-        echo "CONFIG_FIRMWARE_INCLUDE_V2RAY=n" >> .config #集成v2ray执行文件（3.8M左右)，如果不集成，会从网上下载下来执行，不影响正常使用
-        echo "CONFIG_FIRMWARE_INCLUDE_TROJAN=n" >> .config #集成trojan执行文件(1.1M左右)，如果不集成，会从网上下载下来执行，不影响正常使用
-        echo "CONFIG_FIRMWARE_INCLUDE_KOOLPROXY=y" >> .config #KP广告过滤
-        echo "CONFIG_FIRMWARE_INCLUDE_CADDY=y" >> .config #在线文件管理服务
-        echo "CONFIG_FIRMWARE_INCLUDE_CADDYBIN=n" >> .config #集成caddu执行文件，此文件有13M,请注意固件大小。如果不集成，会从网上下载下来执行，不影响正常使用
-        echo "CONFIG_FIRMWARE_INCLUDE_KUMASOCKS=n" >> .config #可以不集成
-        echo "CONFIG_FIRMWARE_INCLUDE_ADGUARDHOME=y" >> .config
-        echo "CONFIG_FIRMWARE_INCLUDE_SRELAY=n" >> .config #可以不集成
-        echo "CONFIG_FIRMWARE_INCLUDE_IPT2SOCKS=n" >> .config
-        echo "CONFIG_FIRMWARE_INCLUDE_MICROSOCKS=y" >> .config
-        echo "CONFIG_FIRMWARE_INCLUDE_WYY=y" >> .config #网易云解锁
-        echo "CONFIG_FIRMWARE_INCLUDE_WYYBIN=n" >> .config #网易云解锁GO版本执行文件（4M多）注意固件超大小,不集成会自动下载
-        echo "CONFIG_FIRMWARE_INCLUDE_ZEROTIER=n" >> .config #zerotier ~1.3M
-        #########################################################################################
-        #自定义添加其它功能请参考源码configs/templates/目录下的config文件。按照上面的格式添加即可
-        #格式如下：
-        #sed -i '/自定义项/d' .config
-        #echo "自定义项=y" >> .config
-        #########################################################################################
-        sudo ./clear_tree
-        sudo ./build_firmware_modify $TNAME 0
-        sudo mv -f images/*.trx /opt/images/
-    - name : Upload packages
-      uses: actions/upload-artifact@master
-      if: always()
-      with:
-        name: Padavan-packages
-        path: /opt/images
+
+      - name: Checkout
+        uses: actions/checkout@master
+        with:
+          ref: master
+
+      - name: Space cleanup
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          docker rmi `docker images -q`
+          sudo rm -rf /usr/share/dotnet /etc/mysql /etc/php /etc/apt/sources.list.d
+          sudo -E apt-get -y purge azure-cli ghc* zulu* hhvm llvm* firefox google* dotnet* powershell openjdk* mysql* php*
+          sudo -E apt-get update
+          sudo -E apt-get -y install build-essential asciidoc binutils bzip2 gawk gettext git libncurses5-dev libz-dev patch python3 unzip zlib1g-dev lib32gcc1 libc6-dev-i386 subversion flex uglifyjs gcc-multilib g++-multilib p7zip p7zip-full msmtp libssl-dev texinfo libglib2.0-dev xmlto qemu-utils upx libelf-dev autoconf automake libtool autopoint device-tree-compiler antlr3 gperf
+          sudo -E apt-get -y autoremove --purge
+          sudo -E apt-get clean
+
+          # sudo mkdir -p -m 777 /mnt/openwrt/bin /mnt/openwrt/build_dir/host /mnt/openwrt/build_dir/hostpkg /mnt/openwrt/dl /mnt/openwrt/feeds /mnt/openwrt/staging_dir
+          # ln -s /mnt/openwrt/bin ./bin
+          # mkdir -p ./build_dir/host && ln -s /mnt/openwrt/build_dir/host ./build_dir/host
+          # mkdir -p ./build_dir/host && ln -s /mnt/openwrt/build_dir/hostpkg ./build_dir/hostpkg
+          # ln -s /mnt/openwrt/dl ./dl
+          # ln -s /mnt/openwrt/feeds ./feeds
+          # ln -s /mnt/openwrt/staging_dir ./staging_dir
+
+          df -h
+
+      - name: Update feeds
+        run: |
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Generate configuration file
+        run: |
+          rm -f ./.config*
+          touch ./.config
+
+          #
+          # ========================固件定制部分========================
+          # 
+
+          # 
+          # 如果不对本区块做出任何编辑, 则生成默认配置固件. 
+          # 
+
+          # 以下为定制化固件选项和说明:
+          #
+
+          #
+          # 有些插件/选项是默认开启的, 如果想要关闭, 请参照以下示例进行编写:
+          # 
+          #          =========================================
+          #         |  # 取消编译VMware镜像:                   |
+          #         |  cat >> .config <<EOF                   |
+          #         |  # CONFIG_VMDK_IMAGES is not set        |
+          #         |  EOF                                    |
+          #          =========================================
+          #
+
+          # 
+          # 以下是一些提前准备好的一些插件选项.
+          # 直接取消注释相应代码块即可应用. 不要取消注释代码块上的汉字说明.
+          # 如果不需要代码块里的某一项配置, 只需要删除相应行.
+          #
+          # 如果需要其他插件, 请按照示例自行添加.
+          # 注意, 只需添加依赖链顶端的包. 如果你需要插件 A, 同时 A 依赖 B, 即只需要添加 A.
+          # 
+          # 无论你想要对固件进行怎样的定制, 都需要且只需要修改 EOF 回环内的内容.
+          # 
+
+          # 编译x64固件:
+          # cat >> .config <<EOF
+          # CONFIG_TARGET_x86=y
+          # CONFIG_TARGET_x86_64=y
+          # CONFIG_TARGET_x86_64_Generic=y
+          # EOF
+
+          # 固件压缩:
+          # cat >> .config <<EOF
+          # CONFIG_TARGET_IMAGES_GZIP=y
+          # EOF
+
+          # 编译UEFI固件:
+          # cat >> .config <<EOF
+          # CONFIG_EFI_IMAGES=y
+          # EOF
+
+          # IPv6支持:
+          # cat >> .config <<EOF
+          # CONFIG_PACKAGE_dnsmasq_full_dhcpv6=y
+          # CONFIG_PACKAGE_ipv6helper=y
+          # EOF
+
+          # 多文件系统支持:
+          # cat >> .config <<EOF
+          # CONFIG_PACKAGE_kmod-fs-nfs=y
+          # CONFIG_PACKAGE_kmod-fs-nfs-common=y
+          # CONFIG_PACKAGE_kmod-fs-nfs-v3=y
+          # CONFIG_PACKAGE_kmod-fs-nfs-v4=y
+          # CONFIG_PACKAGE_kmod-fs-ntfs=y
+          # CONFIG_PACKAGE_kmod-fs-squashfs=y
+          # EOF
+
+          # USB3.0支持:
+          # cat >> .config <<EOF
+          # CONFIG_PACKAGE_kmod-usb-ohci=y
+          # CONFIG_PACKAGE_kmod-usb-ohci-pci=y
+          # CONFIG_PACKAGE_kmod-usb2=y
+          # CONFIG_PACKAGE_kmod-usb2-pci=y
+          # CONFIG_PACKAGE_kmod-usb3=y
+          # EOF
+
+          # 常用LuCI插件选择:
+          # cat >> .config <<EOF
+          # CONFIG_PACKAGE_luci-app-adbyby-plus=y
+          # CONFIG_PACKAGE_luci-app-aria2=y
+          # CONFIG_PACKAGE_luci-app-baidupcs-web=y
+          # CONFIG_PACKAGE_luci-app-docker=y
+          # CONFIG_PACKAGE_luci-app-frpc=y
+          # CONFIG_PACKAGE_luci-app-kodexplorer=y
+          # CONFIG_PACKAGE_luci-app-minidlna=y
+          # CONFIG_PACKAGE_luci-app-openvpn=y
+          # CONFIG_PACKAGE_luci-app-openvpn-server=y
+          # CONFIG_PACKAGE_luci-app-qbittorrent=y
+          # CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Kcptun=y
+          # CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Shadowsocks=y
+          # CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_ShadowsocksR_Server=y
+          # CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_ShadowsocksR_Socks=y
+          # CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_V2ray=y
+          # CONFIG_PACKAGE_luci-app-ttyd=y
+          # CONFIG_PACKAGE_luci-app-v2ray-server=y
+          # CONFIG_PACKAGE_luci-app-verysync=y
+          # CONFIG_PACKAGE_luci-app-webadmin=y
+          # CONFIG_PACKAGE_luci-app-wireguard=y
+          # CONFIG_PACKAGE_luci-app-wrtbwmon=y
+          # EOF
+
+          # LuCI主题:
+          # cat >> .config <<EOF
+          # CONFIG_PACKAGE_luci-theme-argon=y
+          # CONFIG_PACKAGE_luci-theme-netgear=y
+          # EOF
+
+          # 常用软件包:
+          # cat >> .config <<EOF
+          # CONFIG_PACKAGE_curl=y
+          # CONFIG_PACKAGE_htop=y
+          # CONFIG_PACKAGE_nano=y
+          # CONFIG_PACKAGE_screen=y
+          # CONFIG_PACKAGE_tree=y
+          # CONFIG_PACKAGE_vim-fuller=y
+          # CONFIG_PACKAGE_wget=y
+          # EOF
+
+          # 取消编译VMware镜像以及镜像填充 (不要删除被缩进的注释符号):
+          # cat >> .config <<EOF
+          # # CONFIG_TARGET_IMAGES_PAD is not set
+          # # CONFIG_VMDK_IMAGES is not set
+          # EOF
+
+          # 
+          # ========================固件定制部分结束========================
+          # 
+
+          sed -i 's/^[ \t]*//g' ./.config
+          make defconfig
+
+      - name: Make download
+        run: |
+          make download -j8 || make download -j1 V=s
+          find ./dl/ -size -1024c -exec rm -f {} \;
+          df -h
+
+      - name: Compile firmware
+        run: |
+          make -j$(nproc) || make -j1 V=s
+          echo "======================="
+          echo "Space usage:"
+          echo "======================="
+          df -h
+          echo "======================="
+          du -h ./ --max-depth=1
+          du -h /mnt/openwrt/ --max-depth=1
+
+      - name: Prepare artifact
+        run: find ./bin/targets/ -type d -name "packages" | xargs rm -rf {}
+
+      - name: Upload config.seed
+        uses: actions/upload-artifact@master
+        with:
+          name: config.seed
+          path: ./bin/targets/*/*/config.seed
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@master
+        with:
+          name: OpenWrt_firmware
+          path: ./bin/targets/
